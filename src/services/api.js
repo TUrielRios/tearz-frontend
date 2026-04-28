@@ -1,4 +1,7 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+const VITE_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+const API_URL = VITE_API_URL.endsWith('/') ? VITE_API_URL.slice(0, -1) : VITE_API_URL
+
+console.log('🌐 Conectando a Backend en:', API_URL)
 
 const getHeaders = (token) => {
   const headers = { 'Content-Type': 'application/json' }
@@ -68,4 +71,12 @@ export const couponsApi = {
 export const siteContentApi = {
   getAll: () =>
     fetch(`${API_URL}/site-content`).then(handleResponse),
+}
+
+// ─── Journal Posts ─────────────────────────────────────
+export const journalApi = {
+  listPublished: () =>
+    fetch(`${API_URL}/journal`).then(handleResponse),
+  getBySlug: (slug) =>
+    fetch(`${API_URL}/journal/${slug}`).then(handleResponse),
 }

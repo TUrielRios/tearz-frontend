@@ -961,3 +961,49 @@
     min-height: 350px;
   }
 }
+
+/* ─── Landing Editor Tabs ────────────────────────────── */
+.admin-landing-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--admin-bg-input);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  padding: 4px;
+}
+
+.admin-landing-tab {
+  padding: 8px 18px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--admin-text-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--admin-radius-sm);
+  cursor: pointer;
+  transition: all var(--admin-transition);
+  white-space: nowrap;
+}
+
+.admin-landing-tab:hover {
+  color: var(--admin-text);
+  background: var(--admin-bg-card-hover);
+}
+
+.admin-landing-tab.active {
+  background: var(--admin-accent);
+  color: #fff;
+}
+
+@media (max-width: 600px) {
+  .admin-landing-tabs {
+    flex-wrap: wrap;
+  }
+  .admin-landing-tab {
+    flex: 1;
+    text-align: center;
+    padding: 8px 10px;
+    font-size: 0.72rem;
+  }
+}

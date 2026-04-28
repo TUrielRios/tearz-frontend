@@ -1,4 +1,7 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+const VITE_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+const API_URL = VITE_API_URL.endsWith('/') ? VITE_API_URL.slice(0, -1) : VITE_API_URL
+
+console.log('🌐 [Admin] Conectando a Backend en:', API_URL)
 
 const getHeaders = (token) => {
   const headers = { 'Content-Type': 'application/json' }
@@ -87,6 +90,20 @@ export const siteContentApi = {
     fetch(`${API_URL}/admin/site-content`, { headers: getHeaders(token) }).then(handleResponse),
   upsert: (key, value, token) =>
     fetch(`${API_URL}/admin/site-content`, { method: 'PUT', headers: getHeaders(token), body: JSON.stringify({ key, value }) }).then(handleResponse),
+}
+
+// ─── Journal Posts (admin) ─────────────────────────────
+export const adminJournalApi = {
+  list: (token) =>
+    fetch(`${API_URL}/admin/journals`, { headers: getHeaders(token) }).then(handleResponse),
+  getById: (id, token) =>
+    fetch(`${API_URL}/admin/journals/${id}`, { headers: getHeaders(token) }).then(handleResponse),
+  create: (body, token) =>
+    fetch(`${API_URL}/admin/journals`, { method: 'POST', headers: getHeaders(token), body: JSON.stringify(body) }).then(handleResponse),
+  update: (id, body, token) =>
+    fetch(`${API_URL}/admin/journals/${id}`, { method: 'PUT', headers: getHeaders(token), body: JSON.stringify(body) }).then(handleResponse),
+  delete: (id, token) =>
+    fetch(`${API_URL}/admin/journals/${id}`, { method: 'DELETE', headers: getHeaders(token) }).then(handleResponse),
 }
 
 // ─── Upload ────────────────────────────────────────────

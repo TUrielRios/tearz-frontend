@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import './index.css'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { CartProvider, useCart } from './contexts/CartContext'
-import { productsApi, categoriesApi, siteContentApi } from './services/api'
+import { productsApi, categoriesApi, siteContentApi, journalApi } from './services/api'
 import AuthModal from './components/AuthModal'
 import ProductDetail from './pages/ProductDetail'
+import JournalDetail from './pages/JournalDetail'
 import Dashboard from './pages/admin/Dashboard'
 import AdminProducts from './pages/admin/Products'
 import AdminCategories from './pages/admin/Categories'
@@ -13,14 +14,12 @@ import AdminOrders from './pages/admin/Orders'
 import AdminCoupons from './pages/admin/Coupons'
 import AdminCustomers from './pages/admin/Customers'
 import AdminLanding from './pages/admin/LandingContent'
+import AdminJournals from './pages/admin/Journals'
 import Checkout from './pages/Checkout'
 import CheckoutStatus from './pages/CheckoutStatus'
+import StaticPage from './pages/StaticPage'
 
-const editorialPosts = [
-  { id: 1, title: 'RAÍCES DEL STREETWEAR', excerpt: 'Un recorrido por las raíces del streetwear y cómo la cultura urbana moldea nuestra identidad.' },
-  { id: 2, title: 'DETRÁS DE CADA DISEÑO', excerpt: 'El proceso creativo y la historia que hay detrás de cada prenda que diseñamos.' },
-  { id: 3, title: 'CULTURA & CALLE', excerpt: 'Cómo la música, el skate y el arte se fusionan con la moda en nuestras colecciones.' },
-]
+/* Journal posts are now loaded from the API */
 
 function Layout() {
   const navigate = useNavigate()
@@ -37,6 +36,30 @@ function Layout() {
 
   const isHome = location.pathname === '/'
 
+  const [announcementBar1, setAnnouncementBar1] = useState('Envío gratis en compras superiores a $50.000')
+  const [announcementBar2, setAnnouncementBar2] = useState('Envíos a todo el país · Nuevos drops cada semana')
+  const [footerNewsletter, setFooterNewsletter] = useState('Recibí las últimas novedades por email.')
+  const [footerCopyright, setFooterCopyright] = useState('© 2026 — TEARZ 1874!')
+  const [newsletterEmail, setNewsletterEmail] = useState('')
+  const [newsletterStatus, setNewsletterStatus] = useState(null)
+  
+  // Hardcode instagram per user request
+  const instagramLink = 'https://www.instagram.com/tearz.1874/'
+
+  useEffect(() => {
+    siteContentApi.getAll()
+      .then(res => {
+        const c = res.data?.content
+        if (c) {
+          if (c.announcement_bar_1) setAnnouncementBar1(c.announcement_bar_1)
+          if (c.announcement_bar_2) setAnnouncementBar2(c.announcement_bar_2)
+          if (c.footer_newsletter) setFooterNewsletter(c.footer_newsletter)
+          if (c.footer_copyright) setFooterCopyright(c.footer_copyright)
+        }
+      })
+      .catch(err => console.error('Error fetching layout content:', err))
+  }, [])
+
   useEffect(() => {
     const handleScroll = () => setHeaderScrolled(window.scrollY > 50)
     window.addEventListener('scroll', handleScroll, { passive: true })
@@ -52,6 +75,28 @@ function Layout() {
     }
   }
 
+  const handleNewsletterSubmit = async (e) => {
+    e.preventDefault()
+    setNewsletterStatus('loading')
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/newsletter`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: newsletterEmail })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setNewsletterStatus('success')
+        setNewsletterEmail('')
+      } else {
+        setNewsletterStatus('error')
+      }
+    } catch (err) {
+      setNewsletterStatus('error')
+    }
+    setTimeout(() => setNewsletterStatus(null), 3000)
+  }
+
   const handleNavClick = (path) => {
     setMobileMenuOpen(false)
     navigate(path)
@@ -64,12 +109,12 @@ function Layout() {
       {/* Announcement Bars */}
       <div className="announcement-bar">
         <div className="announcement-bar__inner">
-          <p className="announcement-bar__text">Envío gratis en compras superiores a $50.000</p>
+          <p className="announcement-bar__text">{announcementBar1}</p>
         </div>
       </div>
       <div className="announcement-bar announcement-bar--dark">
         <div className="announcement-bar__inner">
-          <p className="announcement-bar__text">Envíos a todo el país · Nuevos drops cada semana</p>
+          <p className="announcement-bar__text">{announcementBar2}</p>
         </div>
       </div>
 
@@ -180,10 +225,16 @@ function Layout() {
         <Route path="/" element={<HomePage />} />
         <Route path="/productos" element={<ProductsPage />} />
         <Route path="/producto/:id" element={<ProductDetail />} />
+        <Route path="/journal/:slug" element={<JournalDetail />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/checkout/success" element={<CheckoutStatus variant="success" />} />
         <Route path="/checkout/failure" element={<CheckoutStatus variant="failure" />} />
         <Route path="/checkout/pending" element={<CheckoutStatus variant="pending" />} />
+        <Route path="/politica-de-privacidad" element={<StaticPage />} />
+        <Route path="/terminos-y-condiciones" element={<StaticPage />} />
+        <Route path="/cambios-y-devoluciones" element={<StaticPage />} />
+        <Route path="/preguntas-frecuentes" element={<StaticPage />} />
+        <Route path="/contacto" element={<StaticPage />} />
       </Routes>
 
       {/* Footer */}
@@ -194,7 +245,7 @@ function Layout() {
             <ul className="footer__list">
               <li><Link to="/" className="footer__link">Inicio</Link></li>
               <li><Link to="/productos" className="footer__link">Productos</Link></li>
-              <li><a href="#" className="footer__link">Contacto</a></li>
+              <li><Link to="/contacto" className="footer__link">Contacto</Link></li>
             </ul>
           </div>
           <div className="footer__col">
@@ -209,34 +260,33 @@ function Layout() {
           </div>
           <div className="footer__col">
             <h4 className="footer__heading">NEWSLETTER</h4>
-            <p className="footer__text">Recibí las últimas novedades por email.</p>
-            <form className="footer__newsletter" onSubmit={(e) => e.preventDefault()}>
-              <input type="email" className="footer__input" placeholder="Tu e-mail" required />
-              <button type="submit" className="footer__submit">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            <p className="footer__text">{footerNewsletter}</p>
+            <form className="footer__newsletter" onSubmit={handleNewsletterSubmit}>
+              <input type="email" className="footer__input" placeholder="Tu e-mail" value={newsletterEmail} onChange={(e) => setNewsletterEmail(e.target.value)} required />
+              <button type="submit" className="footer__submit" disabled={newsletterStatus === 'loading'}>
+                {newsletterStatus === 'loading' ? '...' : <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>}
               </button>
             </form>
+            {newsletterStatus === 'success' && <p style={{color: 'green', fontSize: '0.8rem', marginTop: '4px'}}>¡Gracias por suscribirte!</p>}
+            {newsletterStatus === 'error' && <p style={{color: 'red', fontSize: '0.8rem', marginTop: '4px'}}>Hubo un error. Intenta nuevamente.</p>}
           </div>
           <div className="footer__col">
             <h4 className="footer__heading">INFORMACIÓN</h4>
             <ul className="footer__list">
-              <li><a href="#" className="footer__link">Política de Privacidad</a></li>
-              <li><a href="#" className="footer__link">Términos y Condiciones</a></li>
-              <li><a href="#" className="footer__link">Cambios y Devoluciones</a></li>
-              <li><a href="#" className="footer__link">Preguntas Frecuentes</a></li>
+              <li><Link to="/politica-de-privacidad" className="footer__link">Política de Privacidad</Link></li>
+              <li><Link to="/terminos-y-condiciones" className="footer__link">Términos y Condiciones</Link></li>
+              <li><Link to="/cambios-y-devoluciones" className="footer__link">Cambios y Devoluciones</Link></li>
+              <li><Link to="/preguntas-frecuentes" className="footer__link">Preguntas Frecuentes</Link></li>
             </ul>
           </div>
         </div>
         <div className="footer__social">
-          <a href="#" className="footer__social-link" aria-label="Instagram"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a>
-          <a href="#" className="footer__social-link" aria-label="TikTok"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.88-2.88 2.89 2.89 0 0 1 2.88-2.88c.28 0 .56.04.81.11v-3.5a6.37 6.37 0 0 0-.81-.05A6.34 6.34 0 0 0 3.15 15a6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.87a8.16 8.16 0 0 0 3.76.92V6.35a4.82 4.82 0 0 1 0 .34z"/></svg></a>
-          <a href="#" className="footer__social-link" aria-label="Facebook"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg></a>
-          <a href="#" className="footer__social-link" aria-label="X"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+          <a href={instagramLink} target="_blank" rel="noopener noreferrer" className="footer__social-link" aria-label="Instagram"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a>
         </div>
         <div className="footer__bottom">
           <div className="footer__bottom-left">
             <img src="/WEB/logo pie de pagina.png" alt="Tearz 1874!" className="footer__logo" />
-            <p className="footer__copyright">© 2026 — TEARZ 1874!</p>
+            <p className="footer__copyright">{footerCopyright}</p>
           </div>
           <div className="footer__bottom-right">
             <div className="footer__payments">
@@ -355,6 +405,12 @@ function HomePage() {
   ])
   const [saleBanner, setSaleBanner] = useState({ label: 'TEARZ 1874!', title: 'SALE', subtitle: 'Prendas en liquidación con descuentos increíbles', cta: 'VER SALE', image: '' })
   const [lookbook, setLookbook] = useState({ tag: 'LOOKBOOK', title: 'OTOÑO / INVIERNO 2026', cta: 'VER LOOKBOOK', image: '' })
+  const [journalPosts, setJournalPosts] = useState([])
+  const [philosophyQuote, setPhilosophyQuote] = useState('"ESTILO, ACTITUD Y ESENCIA"')
+  const [newArrivalsTitle, setNewArrivalsTitle] = useState('NUEVOS INGRESOS')
+  const [allProductsTitle, setAllProductsTitle] = useState('TODOS LOS PRODUCTOS')
+  const [editorialTitle, setEditorialTitle] = useState('[ TEARZ JOURNAL ]')
+  const [editorialSubtitle, setEditorialSubtitle] = useState('Inspiración, cultura y estilo por el equipo de Tearz 1874!')
 
   useEffect(() => {
     const interval = setInterval(() => setCurrentSlide(prev => (prev + 1) % slides.length), 5000)
@@ -364,15 +420,23 @@ function HomePage() {
   useEffect(() => {
     siteContentApi.getAll()
       .then(res => {
-        // The API returns { success: true, data: { content: { hero_slides: [...], ... } } }
         const content = res.data?.content;
         if (content) {
           if (content.hero_slides) setSlides(content.hero_slides);
           if (content.sale_banner) setSaleBanner(content.sale_banner);
           if (content.lookbook) setLookbook(content.lookbook);
+          if (content.philosophy_quote) setPhilosophyQuote(content.philosophy_quote);
+          if (content.new_arrivals_title) setNewArrivalsTitle(content.new_arrivals_title);
+          if (content.all_products_title) setAllProductsTitle(content.all_products_title);
+          if (content.editorial_title) setEditorialTitle(content.editorial_title);
+          if (content.editorial_subtitle) setEditorialSubtitle(content.editorial_subtitle);
         }
       })
       .catch(err => console.error('Error fetching site content:', err));
+
+    journalApi.listPublished()
+      .then(res => setJournalPosts(res.data.posts || []))
+      .catch(err => console.error('Error fetching journals:', err));
   }, []);
 
   useEffect(() => {
@@ -481,7 +545,7 @@ function HomePage() {
 
       {/* Philosophy */}
       <section className="philosophy" id="philosophy">
-        <p className="philosophy__quote">"ESTILO, ACTITUD Y ESENCIA"</p>
+        <p className="philosophy__quote">{philosophyQuote}</p>
       </section>
 
       {/* New Arrivals */}
@@ -491,7 +555,7 @@ function HomePage() {
             <div className="products-section__icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
             </div>
-            <h2 className="products-section__title">NUEVOS INGRESOS</h2>
+            <h2 className="products-section__title">{newArrivalsTitle}</h2>
           </div>
           <div className="products-grid">
             {newArrivals.map((product, index) => <ProductCard key={product.id} product={product} index={index} />)}
@@ -506,7 +570,7 @@ function HomePage() {
       {products.length > 0 && (
         <section className="products-section products-section--alt" id="all-products">
           <div className="products-section__header">
-            <h2 className="products-section__title">TODOS LOS PRODUCTOS</h2>
+            <h2 className="products-section__title">{allProductsTitle}</h2>
           </div>
           <div className="products-grid">
             {products.map((product, index) => <ProductCard key={product.id} product={product} index={index} prefix="a-" />)}
@@ -560,20 +624,28 @@ function HomePage() {
         </div>
       </section>
 
-      {/* Editorial */}
-      <section className="editorial" id="editorial">
-        <div className="editorial__header"><h2 className="editorial__title">[ TEARZ JOURNAL ]</h2><p className="editorial__subtitle">Inspiración, cultura y estilo por el equipo de Tearz 1874!</p></div>
-        <div className="editorial__grid">
-          {editorialPosts.map((post, index) => (
-            <article key={post.id} className={`editorial__card reveal ${revealed.includes(`e-${index}`) ? 'visible' : ''}`} data-id={`e-${index}`} style={{ transitionDelay: `${index * 0.1}s` }}>
-              <a href="#" className="editorial__card-link">
-                <div className="editorial__card-image"><div className="editorial__card-placeholder"><span>480 × 320</span></div></div>
-                <div className="editorial__card-content"><h3 className="editorial__card-title">{post.title}</h3><p className="editorial__card-excerpt">{post.excerpt}</p><span className="editorial__card-readmore">Leer más</span></div>
-              </a>
-            </article>
-          ))}
-        </div>
-      </section>
+      {/* Editorial / Journal */}
+      {journalPosts.length > 0 && (
+        <section className="editorial" id="editorial">
+          <div className="editorial__header"><h2 className="editorial__title">{editorialTitle}</h2><p className="editorial__subtitle">{editorialSubtitle}</p></div>
+          <div className="editorial__grid">
+            {journalPosts.slice(0, 3).map((post, index) => (
+              <article key={post.id} className={`editorial__card reveal ${revealed.includes(`e-${index}`) ? 'visible' : ''}`} data-id={`e-${index}`} style={{ transitionDelay: `${index * 0.1}s` }}>
+                <Link to={`/journal/${post.slug}`} className="editorial__card-link">
+                  <div className="editorial__card-image">
+                    {post.coverImage ? (
+                      <img src={post.coverImage} alt={post.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div className="editorial__card-placeholder"><span>480 × 320</span></div>
+                    )}
+                  </div>
+                  <div className="editorial__card-content"><h3 className="editorial__card-title">{post.title}</h3><p className="editorial__card-excerpt">{post.excerpt}</p><span className="editorial__card-readmore">Leer más</span></div>
+                </Link>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
     </>
   )
 }
@@ -663,6 +735,7 @@ function App() {
             <Route path="/admin/coupons" element={<AdminCoupons />} />
             <Route path="/admin/customers" element={<AdminCustomers />} />
             <Route path="/admin/landing" element={<AdminLanding />} />
+            <Route path="/admin/journals" element={<AdminJournals />} />
             {/* Storefront */}
             <Route path="/*" element={<Layout />} />
           </Routes>
