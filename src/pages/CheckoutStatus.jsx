@@ -1,31 +1,51 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useCart } from '../contexts/CartContext'
+import { useAuth } from '../contexts/AuthContext'
+import { paymentsApi } from '../services/api'
 
 export default function CheckoutStatus({ variant }) {
   const location = useLocation()
   const navigate = useNavigate()
   const { clearCart } = useCart()
+  const { user } = useAuth()
   const [orderId, setOrderId] = useState('')
+  const [verifying, setVerifying] = useState(false)
 
   useEffect(() => {
     // Mercado Pago params
     const searchParams = new URLSearchParams(location.search)
     const external_reference = searchParams.get('external_reference')
     const order_id = searchParams.get('order')
+    const currentOrderId = external_reference || order_id || ''
     
+    setOrderId(currentOrderId)
+
     // Clear cart and redirect if successful or pending
     if (variant === 'success' || variant === 'pending') {
       clearCart()
-      // Redirect to home after 3 seconds
+
+      // If we have an order ID, verify it with the backend manually
+      if (currentOrderId && user) {
+        setVerifying(true)
+        paymentsApi.verify(currentOrderId, user.token)
+          .then(() => {
+            console.log('✅ Pago verificado correctamente')
+            setVerifying(false)
+          })
+          .catch(err => {
+            console.error('❌ Error verificando pago:', err)
+            setVerifying(false)
+          })
+      }
+
+      // Redirect to home after 5 seconds
       const timer = setTimeout(() => {
         navigate('/')
-      }, 3000)
+      }, 5000)
       return () => clearTimeout(timer)
     }
-    
-    setOrderId(external_reference || order_id || '')
-  }, [location, variant, clearCart, navigate])
+  }, [location, variant, clearCart, navigate, user])
 
   const content = {
     success: {
@@ -80,9 +100,16 @@ export default function CheckoutStatus({ variant }) {
         </p>
         
         {orderId && (
-          <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '30px' }}>
-            Nº de Orden: <strong>#{orderId}</strong>
-          </p>
+          <div style={{ marginBottom: '30px' }}>
+            <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>
+              Nº de Orden: <strong>#{orderId}</strong>
+            </p>
+            {verifying && (
+              <p style={{ fontSize: '12px', color: '#9ca3af' }}>
+                Verificando estado con el servidor...
+              </p>
+            )}
+          </div>
         )}
 
         {variant === 'failure' ? (

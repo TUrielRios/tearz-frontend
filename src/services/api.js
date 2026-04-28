@@ -59,6 +59,8 @@ export const ordersApi = {
 export const paymentsApi = {
   create: (orderId, token) =>
     fetch(`${API_URL}/payments/create`, { method: 'POST', headers: getHeaders(token), body: JSON.stringify({ orderId }) }).then(handleResponse),
+  verify: (orderId, token) =>
+    fetch(`${API_URL}/payments/verify/${orderId}`, { headers: getHeaders(token) }).then(handleResponse),
 }
 
 // ─── Coupons ───────────────────────────────────────────
