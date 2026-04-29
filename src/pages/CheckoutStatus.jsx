@@ -11,6 +11,7 @@ export default function CheckoutStatus({ variant }) {
   const { user } = useAuth()
   const [orderId, setOrderId] = useState('')
   const [verifying, setVerifying] = useState(false)
+  const verificationStarted = React.useRef(false)
 
   useEffect(() => {
     // Mercado Pago params
@@ -19,22 +20,26 @@ export default function CheckoutStatus({ variant }) {
     const order_id = searchParams.get('order')
     const currentOrderId = external_reference || order_id || ''
     
-    setOrderId(currentOrderId)
+    if (currentOrderId && currentOrderId !== orderId) {
+      setOrderId(currentOrderId)
+    }
 
-    // Clear cart and redirect if successful or pending
-    if (variant === 'success' || variant === 'pending') {
+    // Clear cart and verify if successful or pending
+    if ((variant === 'success' || variant === 'pending') && !verificationStarted.current) {
+      verificationStarted.current = true
       clearCart()
 
       // If we have an order ID, verify it with the backend manually
-      if (currentOrderId && user) {
+      if (currentOrderId && user?.token) {
         setVerifying(true)
         paymentsApi.verify(currentOrderId, user.token)
           .then(() => {
             console.log('✅ Pago verificado correctamente')
-            setVerifying(false)
           })
           .catch(err => {
             console.error('❌ Error verificando pago:', err)
+          })
+          .finally(() => {
             setVerifying(false)
           })
       }
@@ -45,7 +50,7 @@ export default function CheckoutStatus({ variant }) {
       }, 5000)
       return () => clearTimeout(timer)
     }
-  }, [location, variant, clearCart, navigate, user])
+  }, [location.search, variant, clearCart, navigate, user, orderId])
 
   const content = {
     success: {
