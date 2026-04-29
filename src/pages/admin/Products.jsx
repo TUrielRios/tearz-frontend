@@ -5,7 +5,7 @@ import AdminLayout from './AdminLayout'
 
 const fmtPrice = (n) => `$${parseFloat(n || 0).toLocaleString('es-AR')}`
 
-const defaultForm = { name: '', description: '', price: '', oldPrice: '', stock: 0, categoryId: '', sizes: 'S,M,L,XL,XXL', colors: '', badge: '', images: [], active: true }
+const defaultForm = { name: '', description: '', price: '', oldPrice: '', stock: 0, categoryId: '', sizes: 'S,M,L,XL,XXL', colors: '', badge: '', images: [], active: true, sizeStock: {} }
 
 export default function Products() {
   const { token } = useAuth()
@@ -49,6 +49,7 @@ export default function Products() {
       oldPrice: p.oldPrice || '', stock: p.stock, categoryId: p.categoryId || '',
       sizes: (p.sizes || []).join(','), colors: (p.colors || []).join(','),
       badge: p.badge || '', images: p.images || [], active: p.active,
+      sizeStock: p.sizeStock || {},
     })
     setEditId(p.id)
     setModal('edit')
@@ -66,6 +67,7 @@ export default function Products() {
       colors: form.colors ? form.colors.split(',').map(s => s.trim()).filter(Boolean) : [],
       categoryId: form.categoryId || null,
       badge: form.badge || null,
+      sizeStock: form.sizeStock || {},
     }
     try {
       if (modal === 'create') {
@@ -108,7 +110,38 @@ export default function Products() {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
-    setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
+    setForm(prev => {
+      const newState = { ...prev, [name]: type === 'checkbox' ? checked : value }
+      
+      // If sizes change, we might want to sync sizeStock keys (optional but helpful)
+      if (name === 'sizes') {
+        const list = value.split(',').map(s => s.trim()).filter(Boolean)
+        const newSizeStock = { ...prev.sizeStock }
+        // Keep existing, remove ones no longer in list, add new ones with 0
+        // (Actually better to do this on blur to avoid flickering)
+      }
+      
+      return newState
+    })
+  }
+
+  const handleSizesBlur = () => {
+    const list = form.sizes.split(',').map(s => s.trim()).filter(Boolean)
+    const newSizeStock = {}
+    list.forEach(s => {
+      newSizeStock[s] = form.sizeStock[s] || 0
+    })
+    const totalStock = Object.values(newSizeStock).reduce((a, b) => a + (parseInt(b, 10) || 0), 0)
+    setForm(prev => ({ ...prev, sizeStock: newSizeStock, stock: totalStock }))
+  }
+
+  const handleSizeStockChange = (size, val) => {
+    const num = parseInt(val, 10) || 0
+    setForm(prev => {
+      const nextSizeStock = { ...prev.sizeStock, [size]: num }
+      const total = Object.values(nextSizeStock).reduce((a, b) => a + (parseInt(b, 10) || 0), 0)
+      return { ...prev, sizeStock: nextSizeStock, stock: total }
+    })
   }
 
   const filtered = products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
@@ -195,8 +228,8 @@ export default function Products() {
                 </div>
                 <div className="admin-form__row">
                   <div className="admin-form__field">
-                    <label className="admin-form__label">Stock</label>
-                    <input className="admin-form__input" name="stock" type="number" value={form.stock} onChange={handleChange} required />
+                    <label className="admin-form__label">Stock Total (automático)</label>
+                    <input className="admin-form__input" value={form.stock} readOnly style={{ background: '#f0f0f0', cursor: 'not-allowed' }} />
                   </div>
                   <div className="admin-form__field">
                     <label className="admin-form__label">Categoría</label>
@@ -209,13 +242,34 @@ export default function Products() {
                 <div className="admin-form__row">
                   <div className="admin-form__field">
                     <label className="admin-form__label">Talles (separados por coma)</label>
-                    <input className="admin-form__input" name="sizes" value={form.sizes} onChange={handleChange} placeholder="S,M,L,XL,XXL" />
+                    <input className="admin-form__input" name="sizes" value={form.sizes} onChange={handleChange} onBlur={handleSizesBlur} placeholder="S,M,L,XL,XXL" />
                   </div>
                   <div className="admin-form__field">
                     <label className="admin-form__label">Colores (hex, separados por coma)</label>
                     <input className="admin-form__input" name="colors" value={form.colors} onChange={handleChange} placeholder="#1a1a1a,#ffffff" />
                   </div>
                 </div>
+
+                {/* Stock por talle */}
+                {form.sizes.split(',').filter(s => s.trim()).length > 0 && (
+                  <div className="admin-form__field">
+                    <label className="admin-form__label">Stock por Talle</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '10px', background: '#f8f9fa', padding: '15px', borderRadius: '8px', border: '1px solid #eee' }}>
+                      {form.sizes.split(',').map(s => s.trim()).filter(Boolean).map(size => (
+                        <div key={size} style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--admin-text-muted)' }}>{size}</span>
+                          <input 
+                            type="number" 
+                            className="admin-form__input" 
+                            style={{ padding: '4px 8px', fontSize: '0.9rem' }}
+                            value={form.sizeStock[size] ?? 0} 
+                            onChange={(e) => handleSizeStockChange(size, e.target.value)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="admin-form__field">
                   <label className="admin-form__label">Badge (NUEVO, 15% OFF, etc.)</label>
                   <input className="admin-form__input" name="badge" value={form.badge} onChange={handleChange} placeholder="NUEVO" />

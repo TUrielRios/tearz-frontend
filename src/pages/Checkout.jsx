@@ -7,7 +7,7 @@ import { ordersApi, paymentsApi, couponsApi } from '../services/api'
 export default function Checkout() {
   const navigate = useNavigate()
   const { user, token, isLoggedIn } = useAuth()
-  const { items, total, subtotal, clearCart } = useCart()
+  const { items, total, subtotal, subtotalBeforeDiscounts, bundleDiscountTotal, clearCart } = useCart()
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -265,8 +265,14 @@ export default function Checkout() {
           <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '15px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', color: '#4b5563' }}>
               <span>Subtotal</span>
-              <span>{formatPrice(subtotal)}</span>
+              <span>{formatPrice(subtotalBeforeDiscounts)}</span>
             </div>
+            {bundleDiscountTotal > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', color: 'var(--accent-color)', fontWeight: '600' }}>
+                <span>Descuento Combo</span>
+                <span>-{formatPrice(bundleDiscountTotal)}</span>
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', color: '#4b5563' }}>
               <span>{deliveryMethod === 'pickup' ? 'Retirar en local' : 'Envío'}</span>
               <span>{deliveryMethod === 'pickup' ? <span style={{ color: '#059669', fontWeight: '500' }}>GRATIS</span> : <span style={{ fontWeight: '500' }}>A coordinar</span>}</span>

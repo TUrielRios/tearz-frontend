@@ -12,6 +12,7 @@ import AdminProducts from './pages/admin/Products'
 import AdminCategories from './pages/admin/Categories'
 import AdminOrders from './pages/admin/Orders'
 import AdminCoupons from './pages/admin/Coupons'
+import AdminBundles from './pages/admin/Bundles'
 import AdminCustomers from './pages/admin/Customers'
 import AdminLanding from './pages/admin/LandingContent'
 import AdminJournals from './pages/admin/Journals'
@@ -25,7 +26,7 @@ function Layout() {
   const navigate = useNavigate()
   const location = useLocation()
   const { isLoggedIn } = useAuth()
-  const { items, totalItems, subtotal, shippingCost, total, removeItem, updateQuantity, isOpen: cartOpen, setIsOpen: setCartOpen, clearCart } = useCart()
+  const { items, totalItems, subtotal, subtotalBeforeDiscounts, bundleDiscountTotal, shippingCost, total, removeItem, updateQuantity, isOpen: cartOpen, setIsOpen: setCartOpen, clearCart } = useCart()
 
   const [headerScrolled, setHeaderScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -358,8 +359,14 @@ function Layout() {
             <div className="cart-drawer__totals">
               <div className="cart-drawer__total-row">
                 <span>Subtotal</span>
-                <span>{formatPrice(subtotal)}</span>
+                <span>{formatPrice(subtotalBeforeDiscounts)}</span>
               </div>
+              {bundleDiscountTotal > 0 && (
+                <div className="cart-drawer__total-row" style={{ color: 'var(--accent-color)', fontWeight: 600 }}>
+                  <span>Descuento Combo</span>
+                  <span>-{formatPrice(bundleDiscountTotal)}</span>
+                </div>
+              )}
               <div className="cart-drawer__total-row">
                 <span>Envío</span>
                 <span>{shippingCost === 0 ? <em className="cart-drawer__free">GRATIS</em> : formatPrice(shippingCost)}</span>
@@ -733,6 +740,7 @@ function App() {
             <Route path="/admin/categories" element={<AdminCategories />} />
             <Route path="/admin/orders" element={<AdminOrders />} />
             <Route path="/admin/coupons" element={<AdminCoupons />} />
+            <Route path="/admin/bundles" element={<AdminBundles />} />
             <Route path="/admin/customers" element={<AdminCustomers />} />
             <Route path="/admin/landing" element={<AdminLanding />} />
             <Route path="/admin/journals" element={<AdminJournals />} />

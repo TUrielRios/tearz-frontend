@@ -118,3 +118,16 @@ export const uploadApi = {
     }).then(handleResponse)
   },
 }
+
+// ─── Bundles (admin) ───────────────────────────────────
+export const adminBundlesApi = {
+  list: (token) =>
+    fetch(`${API_URL}/admin/bundles`, { headers: getHeaders(token) }).then(handleResponse),
+  create: (body, token) =>
+    fetch(`${API_URL}/admin/bundles`, { method: 'POST', headers: getHeaders(token), body: JSON.stringify(body) }).then(handleResponse),
+  update: (id, body, token) =>
+    fetch(`${API_URL}/admin/bundles/${id}`, { method: 'PUT', headers: getHeaders(token), body: JSON.stringify(body) }).then(handleResponse),
+  delete: (id, token) =>
+    fetch(`${API_URL}/admin/bundles/${id}`, { method: 'DELETE', headers: getHeaders(token) }).then(handleResponse),
+}
+

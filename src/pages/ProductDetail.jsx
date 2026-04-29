@@ -17,8 +17,12 @@ export default function ProductDetail() {
     window.scrollTo(0, 0)
     productsApi.getById(id)
       .then(res => {
-        setProduct(res.data.product)
-        if (res.data.product.sizes?.length) setSelectedSize(res.data.product.sizes[0])
+        const p = res.data.product
+        setProduct(p)
+        // Select first available size
+        const availableSize = p.sizes?.find(s => (p.sizeStock?.[s] ?? 1) > 0)
+        if (availableSize) setSelectedSize(availableSize)
+        else if (p.sizes?.length) setSelectedSize(p.sizes[0])
       })
       .catch(() => navigate('/'))
       .finally(() => setLoading(false))
@@ -84,12 +88,30 @@ export default function ProductDetail() {
             <div className="product-detail__section">
               <span className="product-detail__label">TALLE</span>
               <div className="product-detail__sizes">
-                {product.sizes.map(size => (
-                  <button key={size} className={`product-detail__size-btn ${selectedSize === size ? 'active' : ''}`} onClick={() => setSelectedSize(size)}>
-                    {size}
-                  </button>
-                ))}
+                {product.sizes.map(size => {
+                  const outOfStock = product.sizeStock && product.sizeStock[size] !== undefined ? product.sizeStock[size] <= 0 : false
+                  return (
+                    <button 
+                      key={size} 
+                      className={`product-detail__size-btn ${selectedSize === size ? 'active' : ''} ${outOfStock ? 'disabled' : ''}`} 
+                      onClick={() => !outOfStock && setSelectedSize(size)}
+                      disabled={outOfStock}
+                    >
+                      {size}
+                      {outOfStock && <span className="size-oos-badge">SIN STOCK</span>}
+                    </button>
+                  )
+                })}
               </div>
+            </div>
+          )}
+
+          {selectedSize && product.sizeStock?.[selectedSize] > 0 && product.sizeStock?.[selectedSize] <= 5 && (
+            <div className="product-detail__stock-warning">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+              {product.sizeStock[selectedSize] === 1 
+                ? `¡Última unidad disponible en talle ${selectedSize}!` 
+                : `¡Últimos ${product.sizeStock[selectedSize]} disponibles en talle ${selectedSize}!`}
             </div>
           )}
 
