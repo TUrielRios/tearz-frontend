@@ -34,6 +34,7 @@ function Layout() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [authOpen, setAuthOpen] = useState(false)
+  const [categories, setCategories] = useState([])
 
   const isHome = location.pathname === '/'
 
@@ -61,6 +62,10 @@ function Layout() {
         }
       })
       .catch(err => console.error('Error fetching layout content:', err))
+
+    categoriesApi.list()
+      .then(res => setCategories(res.data.categories || []))
+      .catch(err => console.error('Error fetching categories:', err))
   }, [])
 
   useEffect(() => {
@@ -162,19 +167,35 @@ function Layout() {
               <Link to="/productos" className={`header__nav-link ${location.pathname.startsWith('/productos') ? 'active' : ''}`}>PRODUCTOS</Link>
               <div className="header__dropdown">
                 <ul className="header__dropdown-list">
-                  <li><Link to="/productos?category=remeras" className="header__dropdown-link">Remeras</Link></li>
-                  <li><Link to="/productos?category=chombas" className="header__dropdown-link">Chombas</Link></li>
-                  <li><Link to="/productos?category=bermudas" className="header__dropdown-link">Shorts</Link></li>
-                  <li><Link to="/productos?category=musculosas" className="header__dropdown-link">Musculosas</Link></li>
-                  <li><Link to="/productos?category=conjuntos" className="header__dropdown-link">Conjuntos</Link></li>
+                  {categories.filter(cat => cat.slug !== 'gorras').map(cat => (
+                    <li key={cat.id}>
+                      <Link to={`/productos?category=${cat.slug}`} className="header__dropdown-link">{cat.name}</Link>
+                    </li>
+                  ))}
+                  {categories.length === 0 && (
+                    <>
+                      <li><Link to="/productos?category=remeras" className="header__dropdown-link">Remeras</Link></li>
+                      <li><Link to="/productos?category=chombas" className="header__dropdown-link">Chombas</Link></li>
+                      <li><Link to="/productos?category=bermudas" className="header__dropdown-link">Shorts</Link></li>
+                      <li><Link to="/productos?category=musculosas" className="header__dropdown-link">Musculosas</Link></li>
+                      <li><Link to="/productos?category=conjuntos" className="header__dropdown-link">Conjuntos</Link></li>
+                    </>
+                  )}
                 </ul>
               </div>
             </li>
             <li className="header__nav-item header__nav-item--dropdown">
-              <Link to="/productos?category=gorras" className="header__nav-link">ACCESORIOS</Link>
+              <Link to="/accesorios" className={`header__nav-link ${location.pathname === '/accesorios' ? 'active' : ''}`}>ACCESORIOS</Link>
               <div className="header__dropdown">
                 <ul className="header__dropdown-list">
-                  <li><Link to="/productos?category=gorras" className="header__dropdown-link">Gorras</Link></li>
+                  {categories.filter(cat => cat.slug === 'gorras').map(cat => (
+                    <li key={cat.id}>
+                      <Link to={`/productos?category=${cat.slug}`} className="header__dropdown-link">{cat.name}</Link>
+                    </li>
+                  ))}
+                  {(categories.length === 0 || !categories.some(c => c.slug === 'gorras')) && (
+                    <li><Link to="/productos?category=gorras" className="header__dropdown-link">Gorras</Link></li>
+                  )}
                 </ul>
               </div>
             </li>
@@ -200,10 +221,19 @@ function Layout() {
               PRODUCTOS <span className="accordion-icon">+</span>
             </button>
             <ul className={`mobile-menu__sub-list ${accordionOpen.productos ? 'open' : ''}`}>
-              <li><button className="mobile-menu__sub-link" onClick={() => handleNavClick('/productos?category=remeras')}>Remeras</button></li>
-              <li><button className="mobile-menu__sub-link" onClick={() => handleNavClick('/productos?category=chombas')}>Chombas</button></li>
-              <li><button className="mobile-menu__sub-link" onClick={() => handleNavClick('/productos?category=bermudas')}>Shorts</button></li>
-              <li><button className="mobile-menu__sub-link" onClick={() => handleNavClick('/productos?category=musculosas')}>Musculosas</button></li>
+              {categories.filter(cat => cat.slug !== 'gorras').map(cat => (
+                <li key={cat.id}>
+                  <button className="mobile-menu__sub-link" onClick={() => handleNavClick(`/productos?category=${cat.slug}`)}>{cat.name}</button>
+                </li>
+              ))}
+              {categories.length === 0 && (
+                <>
+                  <li><button className="mobile-menu__sub-link" onClick={() => handleNavClick('/productos?category=remeras')}>Remeras</button></li>
+                  <li><button className="mobile-menu__sub-link" onClick={() => handleNavClick('/productos?category=chombas')}>Chombas</button></li>
+                  <li><button className="mobile-menu__sub-link" onClick={() => handleNavClick('/productos?category=bermudas')}>Shorts</button></li>
+                  <li><button className="mobile-menu__sub-link" onClick={() => handleNavClick('/productos?category=musculosas')}>Musculosas</button></li>
+                </>
+              )}
             </ul>
           </li>
           <li className="mobile-menu__item--accordion">
@@ -211,7 +241,15 @@ function Layout() {
               ACCESORIOS <span className="accordion-icon">+</span>
             </button>
             <ul className={`mobile-menu__sub-list ${accordionOpen.accesorios ? 'open' : ''}`}>
-              <li><button className="mobile-menu__sub-link" onClick={() => handleNavClick('/productos?category=gorras')}>Gorras</button></li>
+              <li><button className="mobile-menu__sub-link" onClick={() => handleNavClick('/accesorios')}>Ver Todos</button></li>
+              {categories.filter(cat => cat.slug === 'gorras').map(cat => (
+                <li key={cat.id}>
+                  <button className="mobile-menu__sub-link" onClick={() => handleNavClick(`/productos?category=${cat.slug}`)}>{cat.name}</button>
+                </li>
+              ))}
+              {(categories.length === 0 || !categories.some(c => c.slug === 'gorras')) && (
+                <li><button className="mobile-menu__sub-link" onClick={() => handleNavClick('/productos?category=gorras')}>Gorras</button></li>
+              )}
             </ul>
           </li>
           <li><button className="mobile-menu__link mobile-menu__link--sale" onClick={() => handleNavClick('/productos?sort=price_asc')}>SALE</button></li>
@@ -227,6 +265,7 @@ function Layout() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/productos" element={<ProductsPage />} />
+        <Route path="/accesorios" element={<ProductsPage />} />
         <Route path="/producto/:id" element={<ProductDetail />} />
         <Route path="/journal/:slug" element={<JournalDetail />} />
         <Route path="/checkout" element={<Checkout />} />
@@ -255,10 +294,19 @@ function Layout() {
             <h4 className="footer__heading">CATEGORÍAS</h4>
             <ul className="footer__list">
               <li><Link to="/productos" className="footer__link">Todos los Productos</Link></li>
-              <li><Link to="/productos?category=remeras" className="footer__link">Remeras</Link></li>
-              <li><Link to="/productos?category=chombas" className="footer__link">Chombas</Link></li>
-              <li><Link to="/productos?category=bermudas" className="footer__link">Shorts</Link></li>
-              <li><Link to="/productos?category=gorras" className="footer__link">Gorras</Link></li>
+              {categories.map(cat => (
+                <li key={cat.id}>
+                  <Link to={`/productos?category=${cat.slug}`} className="footer__link">{cat.name}</Link>
+                </li>
+              ))}
+              {categories.length === 0 && (
+                <>
+                  <li><Link to="/productos?category=remeras" className="footer__link">Remeras</Link></li>
+                  <li><Link to="/productos?category=chombas" className="footer__link">Chombas</Link></li>
+                  <li><Link to="/productos?category=bermudas" className="footer__link">Shorts</Link></li>
+                  <li><Link to="/productos?category=gorras" className="footer__link">Gorras</Link></li>
+                </>
+              )}
             </ul>
           </div>
           <div className="footer__col">
@@ -496,6 +544,7 @@ function HomePage() {
         <div className="product-card__image">
           <img src={product.images?.[0] || product.image} alt={product.name} className="product-card__img" />
           {product.badge && <span className="product-card__badge">{product.badge}</span>}
+          {product.stock <= 0 && <span className="product-card__badge product-card__badge--oos">SIN STOCK</span>}
         </div>
         <div className="product-card__info">
           <h3 className="product-card__name">{product.name}</h3>
@@ -667,13 +716,19 @@ function ProductsPage() {
   const [revealed, setRevealed] = useState([])
   const params = Object.fromEntries(new URLSearchParams(location.search))
 
+  const isAccesorios = location.pathname === '/accesorios'
+  const currentCategory = isAccesorios ? 'gorras' : params.category
+
   useEffect(() => {
     window.scrollTo(0, 0)
     setLoading(true)
-    productsApi.list({ limit: 50, ...params })
+    const fetchParams = { ...params }
+    if (isAccesorios) fetchParams.category = 'gorras'
+    
+    productsApi.list({ limit: 50, ...fetchParams })
       .then(res => { setProducts(res.data.products); setLoading(false) })
       .catch(() => setLoading(false))
-  }, [location.search])
+  }, [location.search, location.pathname])
 
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
@@ -685,7 +740,7 @@ function ProductsPage() {
 
   const displayPrice = (p) => `$${parseFloat(p).toLocaleString('es-AR')}`
 
-  const categoryTitle = params.category ? params.category.charAt(0).toUpperCase() + params.category.slice(1) : params.search ? `Resultados: "${params.search}"` : 'Todos los productos'
+  const categoryTitle = isAccesorios ? 'Accesorios' : params.category ? params.category.charAt(0).toUpperCase() + params.category.slice(1) : params.search ? `Resultados: "${params.search}"` : 'Todos los productos'
 
   return (
     <section className="products-section" style={{ minHeight: '60vh' }}>
@@ -707,6 +762,7 @@ function ProductsPage() {
                 <div className="product-card__image">
                   <img src={product.images?.[0] || product.image} alt={product.name} className="product-card__img" />
                   {product.badge && <span className="product-card__badge">{product.badge}</span>}
+                  {product.stock <= 0 && <span className="product-card__badge product-card__badge--oos">SIN STOCK</span>}
                 </div>
                 <div className="product-card__info">
                   <h3 className="product-card__name">{product.name}</h3>

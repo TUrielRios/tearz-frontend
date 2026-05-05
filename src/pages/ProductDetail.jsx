@@ -20,7 +20,7 @@ export default function ProductDetail() {
         const p = res.data.product
         setProduct(p)
         // Select first available size
-        const availableSize = p.sizes?.find(s => (p.sizeStock?.[s] ?? 1) > 0)
+        const availableSize = p.sizes?.find(s => (p.sizeStock?.[s] ?? 0) > 0)
         if (availableSize) setSelectedSize(availableSize)
         else if (p.sizes?.length) setSelectedSize(p.sizes[0])
       })
@@ -40,8 +40,14 @@ export default function ProductDetail() {
 
   const displayPrice = (p) => `$${parseFloat(p).toLocaleString('es-AR')}`
 
+  const isOutOfStock = selectedSize 
+    ? (product.sizeStock && product.sizeStock[selectedSize] !== undefined 
+        ? product.sizeStock[selectedSize] <= 0 
+        : product.stock <= 0) 
+    : product.stock <= 0
+
   const handleAddToCart = () => {
-    if (!selectedSize) return
+    if (!selectedSize || isOutOfStock) return
     addItem(product, selectedSize, quantity)
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)
@@ -89,7 +95,9 @@ export default function ProductDetail() {
               <span className="product-detail__label">TALLE</span>
               <div className="product-detail__sizes">
                 {product.sizes.map(size => {
-                  const outOfStock = product.sizeStock && product.sizeStock[size] !== undefined ? product.sizeStock[size] <= 0 : false
+                  const outOfStock = (product.sizeStock && product.sizeStock[size] !== undefined) 
+                    ? product.sizeStock[size] <= 0 
+                    : product.stock <= 0
                   return (
                     <button 
                       key={size} 
@@ -124,8 +132,12 @@ export default function ProductDetail() {
             </div>
           </div>
 
-          <button className={`product-detail__add-btn ${added ? 'added' : ''}`} onClick={handleAddToCart} disabled={!selectedSize}>
-            {added ? '✓ AGREGADO AL CARRITO' : 'AGREGAR AL CARRITO'}
+          <button 
+            className={`product-detail__add-btn ${added ? 'added' : ''} ${isOutOfStock ? 'disabled' : ''}`} 
+            onClick={handleAddToCart} 
+            disabled={!selectedSize || isOutOfStock}
+          >
+            {isOutOfStock ? 'SIN STOCK' : added ? '✓ AGREGADO AL CARRITO' : 'AGREGAR AL CARRITO'}
           </button>
 
           <div className="product-detail__extras">

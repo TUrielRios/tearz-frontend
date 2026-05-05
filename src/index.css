@@ -283,6 +283,15 @@ input {
   box-shadow: 0 8px 32px rgba(65, 95, 65, 0.1);
 }
 
+.header__dropdown::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: 0;
+  right: 0;
+  height: 12px;
+}
+
 .header__nav-item--dropdown:hover .header__dropdown {
   opacity: 1;
   visibility: visible;
@@ -843,6 +852,14 @@ input {
   border-radius: 2px;
   text-transform: uppercase;
   z-index: 2;
+}
+
+.product-card__badge--oos {
+  background: var(--color-text-muted);
+  top: auto !important;
+  bottom: 12px !important;
+  right: 12px !important;
+  left: auto !important;
 }
 
 .product-card__info {
