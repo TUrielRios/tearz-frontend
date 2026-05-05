@@ -41,6 +41,7 @@ function Layout() {
   const [announcementBar2, setAnnouncementBar2] = useState('Envíos a todo el país · Nuevos drops cada semana')
   const [footerNewsletter, setFooterNewsletter] = useState('Recibí las últimas novedades por email.')
   const [footerCopyright, setFooterCopyright] = useState('© 2026 — TEARZ 1874!')
+  const [headerLogo, setHeaderLogo] = useState('')
   const [newsletterEmail, setNewsletterEmail] = useState('')
   const [newsletterStatus, setNewsletterStatus] = useState(null)
   
@@ -56,6 +57,7 @@ function Layout() {
           if (c.announcement_bar_2) setAnnouncementBar2(c.announcement_bar_2)
           if (c.footer_newsletter) setFooterNewsletter(c.footer_newsletter)
           if (c.footer_copyright) setFooterCopyright(c.footer_copyright)
+          if (c.header_logo) setHeaderLogo(c.header_logo)
         }
       })
       .catch(err => console.error('Error fetching layout content:', err))
@@ -129,7 +131,7 @@ function Layout() {
           </button>
           <div className="header__logo">
             <Link to="/">
-              <img src="/WEB/logo tearz.png" alt="Tearz 1874!" className="header__logo-img" />
+              <img src={headerLogo || '/WEB/logo tearz.png'} alt="Tearz 1874!" className="header__logo-img" />
             </Link>
           </div>
           <div className="header__utilities">
@@ -186,7 +188,7 @@ function Layout() {
       {/* Mobile Menu */}
       <div className={`mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
         <div className="mobile-menu__header">
-          <img src="/WEB/logo tearz.png" alt="Tearz 1874!" className="mobile-menu__logo" />
+          <img src={headerLogo || '/WEB/logo tearz.png'} alt="Tearz 1874!" className="mobile-menu__logo" />
           <button className="mobile-menu__close" onClick={() => setMobileMenuOpen(false)}>
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>

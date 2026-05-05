@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { siteContentApi } from '../services/api';
 
-const pagesData = {
+const staticPages = {
   '/politica-de-privacidad': {
     title: 'Política de Privacidad',
     content: `
@@ -101,27 +102,92 @@ const pagesData = {
       <p>Si el correo hace una visita y no encuentra a nadie, generalmente intentarán una segunda visita o dejarán el paquete en la sucursal más cercana por unos días. Te recomendamos estar siempre atento al código de seguimiento. Si el paquete vuelve a nosotros, el reenvío quedará a cargo del cliente.</p>
     `
   },
-  '/contacto': {
-    title: 'Contacto',
-    content: `
-      <h2>¿Necesitas ayuda o tenés alguna duda?</h2>
-      <p>En Tearz 1874! estamos para ayudarte. Escribinos por cualquiera de nuestros canales oficiales y te vamos a responder lo más rápido posible (nuestro horario de atención es de Lunes a Viernes de 10:00 a 18:00 hs).</p>
-      
-      <p><strong>Email:</strong> <a href="mailto:tearz.ar.oficial@gmail.com" style="color: var(--color-accent); text-decoration: underline;">tearz.ar.oficial@gmail.com</a></p>
-      <p><strong>Instagram:</strong> <a href="https://www.instagram.com/tearz.1874/" target="_blank" style="color: var(--color-accent); text-decoration: underline;">@tearz.1874</a></p>
-      
-      <p style="margin-top: 30px;"><i>Por favor, si tu consulta es sobre un pedido ya realizado, no olvides incluir tu número de orden (#XXXX) en el mensaje para que podamos ayudarte más rápido.</i></p>
-    `
-  }
 };
 
+// ─── Contact Page (dynamic) ────────────────────────────
+function ContactPage() {
+  const [info, setInfo] = useState({
+    hours: 'Lunes a Viernes de 10:00 a 18:00 hs',
+    email: 'tearz.ar.oficial@gmail.com',
+    phone: '',
+    instagram: '@tearz.1874',
+    instagramUrl: 'https://www.instagram.com/tearz.1874/',
+    extraText: 'Por favor, si tu consulta es sobre un pedido ya realizado, no olvides incluir tu número de orden (#XXXX) en el mensaje para que podamos ayudarte más rápido.',
+  });
+
+  useEffect(() => {
+    siteContentApi.getAll()
+      .then(res => {
+        const c = res.data?.content;
+        if (c?.contact_info) {
+          setInfo(prev => ({ ...prev, ...c.contact_info }));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  return (
+    <div className="static-page" style={{ padding: '80px 20px', maxWidth: '850px', margin: '0 auto', minHeight: '60vh' }}>
+      <h1 style={{ fontFamily: 'var(--font-primary)', fontSize: '2.5rem', marginBottom: '50px', textTransform: 'uppercase', textAlign: 'center', letterSpacing: '0.1em' }}>
+        Contacto
+      </h1>
+      <style>{`
+        .static-content h2 {
+          font-family: var(--font-primary);
+          font-size: 1.4rem;
+          margin-top: 2rem;
+          margin-bottom: 1rem;
+          color: var(--color-text);
+        }
+        .static-content p {
+          margin-bottom: 1.2rem;
+          line-height: 1.8;
+        }
+      `}</style>
+      <div className="static-content" style={{ color: 'var(--color-text-light)' }}>
+        <h2>¿Necesitas ayuda o tenés alguna duda?</h2>
+        <p>
+          En Tearz 1874! estamos para ayudarte. Escribinos por cualquiera de nuestros canales oficiales y te vamos a responder lo más rápido posible
+          {info.hours ? ` (nuestro horario de atención es ${info.hours}).` : '.'}
+        </p>
+
+        {info.email && (
+          <p><strong>Email:</strong>{' '}
+            <a href={`mailto:${info.email}`} style={{ color: 'var(--color-accent)', textDecoration: 'underline' }}>{info.email}</a>
+          </p>
+        )}
+        {info.phone && (
+          <p><strong>Teléfono / WhatsApp:</strong>{' '}
+            <a href={`https://wa.me/${info.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-accent)', textDecoration: 'underline' }}>{info.phone}</a>
+          </p>
+        )}
+        {info.instagram && (
+          <p><strong>Instagram:</strong>{' '}
+            <a href={info.instagramUrl || `https://www.instagram.com/${info.instagram.replace('@','')}/`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-accent)', textDecoration: 'underline' }}>{info.instagram}</a>
+          </p>
+        )}
+
+        {info.extraText && (
+          <p style={{ marginTop: '30px' }}><i>{info.extraText}</i></p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Generic Static Page ───────────────────────────────
 function StaticPage() {
   const location = useLocation();
-  const page = pagesData[location.pathname] || { title: 'Página no encontrada', content: '<p>Lo sentimos, la página que buscas no existe.</p>' };
 
   React.useEffect(() => {
     window.scrollTo(0, 0);
   }, [location.pathname]);
+
+  if (location.pathname === '/contacto') {
+    return <ContactPage />;
+  }
+
+  const page = staticPages[location.pathname] || { title: 'Página no encontrada', content: '<p>Lo sentimos, la página que buscas no existe.</p>' };
 
   return (
     <div className="static-page" style={{ padding: '80px 20px', maxWidth: '850px', margin: '0 auto', minHeight: '60vh' }}>
@@ -152,10 +218,10 @@ function StaticPage() {
           }
         `}
       </style>
-      <div 
-        className="static-content" 
+      <div
+        className="static-content"
         style={{ color: 'var(--color-text-light)' }}
-        dangerouslySetInnerHTML={{ __html: page.content }} 
+        dangerouslySetInnerHTML={{ __html: page.content }}
       />
     </div>
   );

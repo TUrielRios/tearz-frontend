@@ -17,6 +17,18 @@ export default function LandingContent() {
   const [cropModal, setCropModal] = useState(null)
   const [activeTab, setActiveTab] = useState('hero')
 
+  // ─── Logo & Contact state ────────────────────────────
+  const [headerLogo, setHeaderLogo] = useState('')
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [contactInfo, setContactInfo] = useState({
+    hours: 'Lunes a Viernes de 10:00 a 18:00 hs',
+    email: 'tearz.ar.oficial@gmail.com',
+    phone: '',
+    instagram: '@tearz.1874',
+    instagramUrl: 'https://www.instagram.com/tearz.1874/',
+    extraText: 'Por favor, si tu consulta es sobre un pedido ya realizado, no olvides incluir tu número de orden (#XXXX) en el mensaje para que podamos ayudarte más rápido.',
+  })
+
   // ─── Content state ───────────────────────────────────
   const [announcementBar1, setAnnouncementBar1] = useState('Envío gratis en compras superiores a $50.000')
   const [announcementBar2, setAnnouncementBar2] = useState('Envíos a todo el país · Nuevos drops cada semana')
@@ -55,6 +67,8 @@ export default function LandingContent() {
         if (c.footer_newsletter) setFooterNewsletter(c.footer_newsletter)
         if (c.footer_copyright) setFooterCopyright(c.footer_copyright)
         if (c.social_links) setSocialLinks(c.social_links)
+        if (c.header_logo) setHeaderLogo(c.header_logo)
+        if (c.contact_info) setContactInfo(prev => ({ ...prev, ...c.contact_info }))
       })
       .catch(console.error)
       .finally(() => setLoading(false))
@@ -83,6 +97,27 @@ export default function LandingContent() {
     finally { setUploading(false) }
   }
 
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingLogo(true)
+    try {
+      const res = await uploadApi.images([file], token)
+      setHeaderLogo(res.data.urls[0])
+      await siteContentApi.upsert('header_logo', res.data.urls[0], token)
+      showToast('Logo actualizado ✓')
+    } catch { showToast('Error subiendo logo', true) }
+    finally { setUploadingLogo(false); e.target.value = '' }
+  }
+
+  const removeLogo = async () => {
+    setHeaderLogo('')
+    try {
+      await siteContentApi.upsert('header_logo', '', token)
+      showToast('Logo restablecido al original ✓')
+    } catch { showToast('Error', true) }
+  }
+
   const saveAll = async () => {
     setSaving(true)
     try {
@@ -100,6 +135,7 @@ export default function LandingContent() {
         siteContentApi.upsert('footer_newsletter', footerNewsletter, token),
         siteContentApi.upsert('footer_copyright', footerCopyright, token),
         siteContentApi.upsert('social_links', socialLinks, token),
+        siteContentApi.upsert('contact_info', contactInfo, token),
       ])
       showToast('Contenido guardado ✓')
     } catch (err) { showToast(err.message || 'Error', true) }
@@ -120,6 +156,8 @@ export default function LandingContent() {
     { key: 'texts', label: '✏️ Textos' },
     { key: 'banners', label: '🖼️ Banners' },
     { key: 'footer', label: '📋 Footer' },
+    { key: 'logo', label: '🖼 Logo' },
+    { key: 'contacto', label: '📞 Contacto' },
   ]
 
   return (
@@ -352,6 +390,91 @@ export default function LandingContent() {
                 <label className="admin-form__label">X (Twitter)</label>
                 <input className="admin-form__input" value={socialLinks.twitter} onChange={e => setSocialLinks(prev => ({ ...prev, twitter: e.target.value }))} placeholder="https://x.com/..." />
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── LOGO TAB ─── */}
+      {activeTab === 'logo' && (
+        <div className="admin-landing-section">
+          <h3 className="admin-landing-section__title" style={{ marginBottom: '16px' }}>Logo del Header</h3>
+          <div className="admin-landing-card" style={{ gridTemplateColumns: '1fr' }}>
+            <div className="admin-form" style={{ gap: '16px' }}>
+              <p style={{ fontSize: '0.82rem', color: 'var(--admin-text-muted)', lineHeight: 1.6 }}>
+                Subí una imagen para reemplazar el logo en la barra de navegación (ej: versión navideña con gorrito). El tamaño se mantiene automáticamente. Si eliminás el logo personalizado, se vuelve al logo original.
+              </p>
+
+              {/* Preview */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
+                <div style={{ background: 'var(--admin-bg)', border: '1px solid var(--admin-border)', borderRadius: '8px', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '200px' }}>
+                  <img
+                    src={headerLogo || '/WEB/logo tearz.png'}
+                    alt="Logo preview"
+                    style={{ height: '68px', width: 'auto', objectFit: 'contain' }}
+                  />
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--admin-text-muted)' }}>
+                  {headerLogo ? '✅ Logo personalizado activo' : '📌 Usando logo original'}
+                </div>
+              </div>
+
+              {/* Upload zone */}
+              <div className="admin-form__field">
+                <label className="admin-form__label">Subir nuevo logo</label>
+                <div className="admin-upload">
+                  <div className="admin-upload__zone">
+                    <input type="file" accept="image/*" onChange={handleLogoUpload} />
+                    <p className="admin-upload__text">
+                      {uploadingLogo ? 'Subiendo...' : <><strong>Click para subir</strong> — PNG o SVG transparente recomendado</>}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {headerLogo && (
+                <button className="admin-btn admin-btn--danger admin-btn--sm" onClick={removeLogo} style={{ alignSelf: 'flex-start' }}>
+                  🗑️ Eliminar logo personalizado
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── CONTACTO TAB ─── */}
+      {activeTab === 'contacto' && (
+        <div className="admin-landing-section">
+          <h3 className="admin-landing-section__title" style={{ marginBottom: '16px' }}>Página de Contacto</h3>
+          <div className="admin-landing-card" style={{ gridTemplateColumns: '1fr' }}>
+            <div className="admin-form" style={{ gap: '12px' }}>
+              <div className="admin-form__field">
+                <label className="admin-form__label">Horario de Atención</label>
+                <input className="admin-form__input" value={contactInfo.hours} onChange={e => setContactInfo(prev => ({ ...prev, hours: e.target.value }))} placeholder="Lunes a Viernes de 10:00 a 18:00 hs" />
+              </div>
+              <div className="admin-form__field">
+                <label className="admin-form__label">Email de Contacto</label>
+                <input className="admin-form__input" type="email" value={contactInfo.email} onChange={e => setContactInfo(prev => ({ ...prev, email: e.target.value }))} placeholder="contacto@tearz.com" />
+              </div>
+              <div className="admin-form__field">
+                <label className="admin-form__label">Teléfono / WhatsApp (con código de área, ej: +541155556789)</label>
+                <input className="admin-form__input" value={contactInfo.phone} onChange={e => setContactInfo(prev => ({ ...prev, phone: e.target.value }))} placeholder="+54 11 XXXX-XXXX" />
+              </div>
+              <div className="admin-form__row">
+                <div className="admin-form__field">
+                  <label className="admin-form__label">Instagram (handle)</label>
+                  <input className="admin-form__input" value={contactInfo.instagram} onChange={e => setContactInfo(prev => ({ ...prev, instagram: e.target.value }))} placeholder="@tearz.1874" />
+                </div>
+                <div className="admin-form__field">
+                  <label className="admin-form__label">Instagram URL</label>
+                  <input className="admin-form__input" value={contactInfo.instagramUrl} onChange={e => setContactInfo(prev => ({ ...prev, instagramUrl: e.target.value }))} placeholder="https://www.instagram.com/tearz.1874/" />
+                </div>
+              </div>
+              <div className="admin-form__field">
+                <label className="admin-form__label">Nota al pie (texto en cursiva)</label>
+                <input className="admin-form__input" value={contactInfo.extraText} onChange={e => setContactInfo(prev => ({ ...prev, extraText: e.target.value }))} placeholder="Por favor incluí tu número de orden..." />
+              </div>
+              <p style={{ fontSize: '0.78rem', color: 'var(--admin-text-muted)' }}>💾 Acordate de hacer click en "Guardar Todo" para confirmar los cambios.</p>
             </div>
           </div>
         </div>
