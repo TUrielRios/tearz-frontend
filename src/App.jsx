@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Link, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import './index.css'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
@@ -167,7 +167,7 @@ function Layout() {
               <Link to="/productos" className={`header__nav-link ${location.pathname.startsWith('/productos') ? 'active' : ''}`}>PRODUCTOS</Link>
               <div className="header__dropdown">
                 <ul className="header__dropdown-list">
-                  {categories.filter(cat => cat.slug !== 'gorras').map(cat => (
+                  {categories.filter(cat => !cat.isAccessory).map(cat => (
                     <li key={cat.id}>
                       <Link to={`/productos?category=${cat.slug}`} className="header__dropdown-link">{cat.name}</Link>
                     </li>
@@ -188,14 +188,12 @@ function Layout() {
               <Link to="/accesorios" className={`header__nav-link ${location.pathname === '/accesorios' ? 'active' : ''}`}>ACCESORIOS</Link>
               <div className="header__dropdown">
                 <ul className="header__dropdown-list">
-                  {categories.filter(cat => cat.slug === 'gorras').map(cat => (
+                  <li><Link to="/accesorios" className="header__dropdown-link" style={{ fontWeight: 600 }}>Ver Todos</Link></li>
+                  {categories.filter(cat => cat.isAccessory).map(cat => (
                     <li key={cat.id}>
                       <Link to={`/productos?category=${cat.slug}`} className="header__dropdown-link">{cat.name}</Link>
                     </li>
                   ))}
-                  {(categories.length === 0 || !categories.some(c => c.slug === 'gorras')) && (
-                    <li><Link to="/productos?category=gorras" className="header__dropdown-link">Gorras</Link></li>
-                  )}
                 </ul>
               </div>
             </li>
@@ -221,7 +219,7 @@ function Layout() {
               PRODUCTOS <span className="accordion-icon">+</span>
             </button>
             <ul className={`mobile-menu__sub-list ${accordionOpen.productos ? 'open' : ''}`}>
-              {categories.filter(cat => cat.slug !== 'gorras').map(cat => (
+              {categories.filter(cat => !cat.isAccessory).map(cat => (
                 <li key={cat.id}>
                   <button className="mobile-menu__sub-link" onClick={() => handleNavClick(`/productos?category=${cat.slug}`)}>{cat.name}</button>
                 </li>
@@ -242,14 +240,11 @@ function Layout() {
             </button>
             <ul className={`mobile-menu__sub-list ${accordionOpen.accesorios ? 'open' : ''}`}>
               <li><button className="mobile-menu__sub-link" onClick={() => handleNavClick('/accesorios')}>Ver Todos</button></li>
-              {categories.filter(cat => cat.slug === 'gorras').map(cat => (
+              {categories.filter(cat => cat.isAccessory).map(cat => (
                 <li key={cat.id}>
                   <button className="mobile-menu__sub-link" onClick={() => handleNavClick(`/productos?category=${cat.slug}`)}>{cat.name}</button>
                 </li>
               ))}
-              {(categories.length === 0 || !categories.some(c => c.slug === 'gorras')) && (
-                <li><button className="mobile-menu__sub-link" onClick={() => handleNavClick('/productos?category=gorras')}>Gorras</button></li>
-              )}
             </ul>
           </li>
           <li><button className="mobile-menu__link mobile-menu__link--sale" onClick={() => handleNavClick('/productos?sort=price_asc')}>SALE</button></li>
@@ -277,6 +272,8 @@ function Layout() {
         <Route path="/cambios-y-devoluciones" element={<StaticPage />} />
         <Route path="/preguntas-frecuentes" element={<StaticPage />} />
         <Route path="/contacto" element={<StaticPage />} />
+        <Route path="/coleccion" element={<CollectionPage />} />
+        <Route path="/coleccion/:slug" element={<CollectionPage />} />
       </Routes>
 
       {/* Footer */}
@@ -586,7 +583,7 @@ function HomePage() {
               <div className="hero__slide-content">
                 <span className="hero__slide-tag">{slide.tag}</span>
                 <h2 className="hero__slide-title">{slide.title}</h2>
-                <Link to="/productos" className="hero__slide-cta">{slide.cta}</Link>
+                <Link to={slide.link || "/productos"} className="hero__slide-cta">{slide.cta}</Link>
               </div>
             </div>
           ))}
@@ -656,7 +653,7 @@ function HomePage() {
         <div className="lookbook__overlay">
           <span className="lookbook__tag">{lookbook.tag}</span>
           <h2 className="lookbook__title">{lookbook.title}</h2>
-          <Link to="/productos" className="lookbook__cta">{lookbook.cta}</Link>
+          <Link to={lookbook.link || "/productos"} className="lookbook__cta">{lookbook.cta}</Link>
         </div>
       </section>
 
@@ -666,7 +663,7 @@ function HomePage() {
           <span className="feature-banner__label">{saleBanner.label}</span>
           <h2 className="feature-banner__title">{saleBanner.title}</h2>
           <p className="feature-banner__subtitle">{saleBanner.subtitle}</p>
-          <Link to="/productos?sort=price_asc" className="feature-banner__cta">{saleBanner.cta || 'VER SALE'}</Link>
+          <Link to={saleBanner.link || "/productos?sort=price_asc"} className="feature-banner__cta">{saleBanner.cta || 'VER SALE'}</Link>
         </div>
         <div className="feature-banner__image">
           {saleBanner.image ? (
@@ -723,7 +720,7 @@ function ProductsPage() {
     window.scrollTo(0, 0)
     setLoading(true)
     const fetchParams = { ...params }
-    if (isAccesorios) fetchParams.category = 'gorras'
+    if (isAccesorios) fetchParams.isAccessory = 'true'
     
     productsApi.list({ limit: 50, ...fetchParams })
       .then(res => { setProducts(res.data.products); setLoading(false) })
@@ -774,6 +771,148 @@ function ProductsPage() {
                     {product.colors?.map((color, i) => (
                       <span key={i} className="product-card__color" style={{ background: color, border: color === '#ffffff' || color === '#f5f5f5' ? '1px solid #ddd' : 'none' }} />
                     ))}
+                  </div>
+                </div>
+              </Link>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+// ─── COLLECTION PAGE ───────────────────────────────────
+function CollectionPage() {
+  const location = useLocation()
+  const { slug } = useParams()
+  const [products, setProducts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [revealed, setRevealed] = useState([])
+  const [collectionTitle, setCollectionTitle] = useState('COLECCIÓN')
+  const params = Object.fromEntries(new URLSearchParams(location.search))
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+    setLoading(true)
+    
+    const currentPath = location.pathname.replace(/\/$/, '')
+    const currentSearch = location.search
+    const currentFullUrl = currentPath + currentSearch
+    
+    console.log("DEBUG: Current normalized Path:", currentPath)
+    console.log("DEBUG: Current Full URL:", currentFullUrl)
+
+    // Fetch site content to find the matching title from admin
+    siteContentApi.getAll().then(res => {
+      const allContent = res.data?.content || res.data?.data?.content || {}
+      console.log("DEBUG: All Content Keys:", Object.keys(allContent))
+
+      const hero = allContent.hero_slides || []
+      const lookbook = allContent.lookbook || {}
+      const sale = allContent.sale_banner || {}
+      
+      let foundTitle = ''
+      let foundIds = params.ids
+      
+      const normalize = (url) => url ? url.replace(/^\//, '').replace(/\/$/, '') : ''
+
+      const normalizedCurrentPath = normalize(currentPath)
+      const normalizedCurrentFullUrl = normalize(currentFullUrl)
+
+      // Check Hero slides
+      const matchingSlide = hero.find(s => {
+        const normLink = normalize(s.link)
+        return normLink === normalizedCurrentFullUrl || normLink === normalizedCurrentPath
+      })
+      if (matchingSlide) {
+        console.log("DEBUG: Match found in Hero Slide")
+        foundTitle = matchingSlide.title
+        if (!foundIds && matchingSlide.productIds?.length > 0) foundIds = matchingSlide.productIds.join(',')
+      }
+      
+      // Check Lookbook
+      const normLookbookLink = normalize(lookbook.link)
+      if (!foundTitle && (normLookbookLink === normalizedCurrentFullUrl || normLookbookLink === normalizedCurrentPath)) {
+        console.log("DEBUG: Match found in Lookbook")
+        foundTitle = lookbook.title
+        if (!foundIds && lookbook.productIds?.length > 0) foundIds = lookbook.productIds.join(',')
+      }
+      
+      // Check Sale Banner
+      const normSaleLink = normalize(sale.link)
+      if (!foundTitle && (normSaleLink === normalizedCurrentFullUrl || normSaleLink === normalizedCurrentPath)) {
+        console.log("DEBUG: Match found in Sale Banner")
+        foundTitle = sale.title
+        if (!foundIds && sale.productIds?.length > 0) foundIds = sale.productIds.join(',')
+      }
+      
+      console.log("DEBUG: Found Title:", foundTitle)
+      console.log("DEBUG: Found IDs to fetch:", foundIds)
+
+      if (foundTitle) setCollectionTitle(foundTitle)
+      else if (params.title) setCollectionTitle(decodeURIComponent(params.title))
+
+      if (foundIds) {
+        productsApi.list({ limit: 100, ids: foundIds })
+          .then(res => { 
+            console.log("DEBUG: Products fetched:", res.data?.products?.length)
+            setProducts(res.data.products || []); 
+            setLoading(false) 
+          })
+          .catch(err => {
+            console.error("DEBUG: Error fetching products:", err)
+            setLoading(false)
+          })
+      } else {
+        console.log("DEBUG: No IDs found to fetch")
+        setProducts([])
+        setLoading(false)
+      }
+    }).catch(err => {
+      console.error("DEBUG: Error fetching site content:", err)
+      setLoading(false)
+    })
+  }, [location.search, location.pathname])
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => { if (entry.isIntersecting) setRevealed(prev => [...prev, entry.target.dataset.id]) })
+    }, { threshold: 0.1 })
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el))
+    return () => observer.disconnect()
+  }, [products])
+
+  const displayPrice = (p) => `$${parseFloat(p).toLocaleString('es-AR')}`
+
+  return (
+    <section className="products-section" style={{ minHeight: '70vh', paddingTop: '160px' }}>
+      <div className="products-section__header" style={{ marginBottom: '60px' }}>
+        <span style={{ fontSize: '0.7rem', letterSpacing: '0.3em', color: 'var(--color-accent)', textTransform: 'uppercase', display: 'block', marginBottom: '12px' }}>Colección Especial</span>
+        <h2 className="products-section__title" style={{ fontSize: '2.5rem' }}>{collectionTitle.toUpperCase()}</h2>
+      </div>
+      {loading ? (
+        <div className="product-detail__loading"><div className="product-detail__spinner" /></div>
+      ) : products.length === 0 ? (
+        <div className="products-empty">
+          <p>Esta selección está vacía o no existe</p>
+          <Link to="/productos" className="btn btn--primary" style={{ marginTop: '24px' }}>VER TODOS</Link>
+        </div>
+      ) : (
+        <div className="products-grid">
+          {products.map((product, index) => (
+            <article key={product.id} className={`product-card reveal ${revealed.includes(`c-${index}`) ? 'visible' : ''}`} data-id={`c-${index}`} style={{ transitionDelay: `${index * 0.08}s` }}>
+              <Link to={`/producto/${product.id}`} className="product-card__link">
+                <div className="product-card__image">
+                  <img src={product.images?.[0] || product.image} alt={product.name} className="product-card__img" />
+                  {product.badge && <span className="product-card__badge">{product.badge}</span>}
+                  {product.stock <= 0 && <span className="product-card__badge product-card__badge--oos">SIN STOCK</span>}
+                </div>
+                <div className="product-card__info">
+                  <h3 className="product-card__name">{product.name}</h3>
+                  <div className="product-card__price-wrapper">
+                    {product.oldPrice && <span className="product-card__price product-card__price--old">{displayPrice(product.oldPrice)}</span>}
+                    <p className="product-card__price">{displayPrice(product.price)}</p>
                   </div>
                 </div>
               </Link>

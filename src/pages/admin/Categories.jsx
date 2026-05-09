@@ -8,7 +8,7 @@ export default function Categories() {
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(null)
-  const [form, setForm] = useState({ name: '' })
+  const [form, setForm] = useState({ name: '', isAccessory: false })
   const [editId, setEditId] = useState(null)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState(null)
@@ -57,7 +57,7 @@ export default function Categories() {
     <AdminLayout title="Categorías">
       <div className="admin-filters">
         <div style={{ flex: 1 }} />
-        <button className="admin-btn admin-btn--primary" onClick={() => { setForm({ name: '' }); setEditId(null); setModal('create') }}>
+        <button className="admin-btn admin-btn--primary" onClick={() => { setForm({ name: '', isAccessory: false }); setEditId(null); setModal('create') }}>
           + Nueva Categoría
         </button>
       </div>
@@ -65,15 +65,16 @@ export default function Categories() {
       <div className="admin-card">
         {loading ? <div className="admin-empty"><div className="product-detail__spinner" /></div> : (
           <table className="admin-table">
-            <thead><tr><th>Nombre</th><th>Slug</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Nombre</th><th>Tipo</th><th>Slug</th><th>Acciones</th></tr></thead>
             <tbody>
               {categories.map(c => (
                 <tr key={c.id}>
                   <td style={{ fontWeight: 600 }}>{c.name}</td>
+                  <td>{c.isAccessory ? <span className="admin-badge admin-badge--primary">Accesorio</span> : <span className="admin-badge admin-badge--secondary">Producto</span>}</td>
                   <td style={{ color: 'var(--admin-text-muted)' }}>{c.slug}</td>
                   <td>
                     <div className="admin-actions">
-                      <button className="admin-btn admin-btn--secondary admin-btn--sm" onClick={() => { setForm({ name: c.name }); setEditId(c.id); setModal('edit') }}>Editar</button>
+                      <button className="admin-btn admin-btn--secondary admin-btn--sm" onClick={() => { setForm({ name: c.name, isAccessory: !!c.isAccessory }); setEditId(c.id); setModal('edit') }}>Editar</button>
                       <button className="admin-btn admin-btn--danger admin-btn--sm" onClick={() => handleDelete(c.id)}>×</button>
                     </div>
                   </td>
@@ -95,7 +96,11 @@ export default function Categories() {
               <form className="admin-form" onSubmit={handleSubmit}>
                 <div className="admin-form__field">
                   <label className="admin-form__label">Nombre</label>
-                  <input className="admin-form__input" value={form.name} onChange={e => setForm({ name: e.target.value })} required placeholder="Ej: Remeras" />
+                  <input className="admin-form__input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required placeholder="Ej: Remeras" />
+                </div>
+                <div className="admin-form__field" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
+                  <input type="checkbox" id="isAccessory" checked={form.isAccessory} onChange={e => setForm({ ...form, isAccessory: e.target.checked })} style={{ width: 'auto' }} />
+                  <label htmlFor="isAccessory" className="admin-form__label" style={{ marginBottom: 0, cursor: 'pointer' }}>Es un accesorio (aparecerá en la pestaña Accesorios)</label>
                 </div>
                 <div className="admin-form__actions">
                   <button type="button" className="admin-btn admin-btn--secondary" onClick={() => setModal(null)}>Cancelar</button>

@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
-import { siteContentApi, uploadApi } from '../../services/adminApi'
+import { siteContentApi, uploadApi, adminProductsApi, adminCategoriesApi } from '../../services/adminApi'
 import AdminLayout from './AdminLayout'
 import CropperModal from '../../components/admin/CropperModal'
 
-const defaultSlide = { tag: '', title: '', cta: '', image: '' }
-const defaultBanner = { label: '', title: '', subtitle: '', cta: '', image: '' }
-const defaultLookbook = { tag: '', title: '', cta: '', image: '' }
+const defaultSlide = { tag: '', title: '', cta: '', image: '', link: '', productIds: [] }
+const defaultBanner = { label: '', title: '', subtitle: '', cta: '', image: '', link: '', productIds: [] }
+const defaultLookbook = { tag: '', title: '', cta: '', image: '', link: '', productIds: [] }
 
 export default function LandingContent() {
   const { token } = useAuth()
@@ -39,16 +39,19 @@ export default function LandingContent() {
   const [editorialSubtitle, setEditorialSubtitle] = useState('Inspiración, cultura y estilo por el equipo de Tearz 1874!')
 
   const [heroSlides, setHeroSlides] = useState([
-    { tag: 'NUEVA COLECCIÓN', title: 'OTOÑO / INVIERNO 2026', cta: 'VER COLECCIÓN', image: '' },
-    { tag: 'EDICIÓN LIMITADA', title: 'COLECCIÓN CÁPSULA', cta: 'EXPLORAR', image: '' },
-    { tag: 'SALE', title: 'HASTA 50% OFF', cta: 'COMPRAR AHORA', image: '' },
+    { tag: 'NUEVA COLECCIÓN', title: 'OTOÑO / INVIERNO 2026', cta: 'VER COLECCIÓN', image: '', link: '' },
+    { tag: 'EDICIÓN LIMITADA', title: 'COLECCIÓN CÁPSULA', cta: 'EXPLORAR', image: '', link: '' },
+    { tag: 'SALE', title: 'HASTA 50% OFF', cta: 'COMPRAR AHORA', image: '', link: '' },
   ])
-  const [saleBanner, setSaleBanner] = useState({ label: 'TEARZ 1874!', title: 'SALE', subtitle: 'Prendas en liquidación con descuentos increíbles', cta: 'VER SALE', image: '' })
-  const [lookbook, setLookbook] = useState({ tag: 'LOOKBOOK', title: 'OTOÑO / INVIERNO 2026', cta: 'VER LOOKBOOK', image: '' })
+  const [saleBanner, setSaleBanner] = useState({ label: 'TEARZ 1874!', title: 'SALE', subtitle: 'Prendas en liquidación con descuentos increíbles', cta: 'VER SALE', image: '', link: '' })
+  const [lookbook, setLookbook] = useState({ tag: 'LOOKBOOK', title: 'OTOÑO / INVIERNO 2026', cta: 'VER LOOKBOOK', image: '', link: '' })
 
   const [footerNewsletter, setFooterNewsletter] = useState('Recibí las últimas novedades por email.')
   const [footerCopyright, setFooterCopyright] = useState('© 2026 — TEARZ 1874!')
   const [socialLinks, setSocialLinks] = useState({ instagram: '', tiktok: '', facebook: '', twitter: '' })
+  
+  const [availableProducts, setAvailableProducts] = useState([])
+  const [availableCategories, setAvailableCategories] = useState([])
 
   useEffect(() => {
     siteContentApi.getAll(token)
@@ -72,6 +75,10 @@ export default function LandingContent() {
       })
       .catch(console.error)
       .finally(() => setLoading(false))
+
+    // Fetch helper data
+    adminCategoriesApi.list(token).then(res => setAvailableCategories(res.data.categories || [])).catch(console.error)
+    adminProductsApi.list(token, { limit: 100 }).then(res => setAvailableProducts(res.data.products || [])).catch(console.error)
   }, [token])
 
   const showToast = (msg, error = false) => { setToast({ msg, error }); setTimeout(() => setToast(null), 3000) }
@@ -143,7 +150,32 @@ export default function LandingContent() {
   }
 
   const updateSlide = (idx, field, value) => {
-    setHeroSlides(prev => prev.map((s, i) => i === idx ? { ...s, [field]: value } : s))
+    setHeroSlides(prev => prev.map((s, i) => {
+      if (i === idx) {
+        const updated = { ...s, [field]: value }
+        // Sync link title if it's a collection link
+        if (updated.link?.includes('/coleccion')) {
+          const titleToUse = updated.title || 'Selección'
+          const idsMatch = updated.link.match(/ids=([^&]+)/)
+          if (idsMatch) {
+            updated.link = `/coleccion?ids=${idsMatch[1]}&title=${encodeURIComponent(titleToUse)}`
+          }
+        }
+        return updated
+      }
+      return s
+    }))
+  }
+
+  // Helper to update any banner and sync its link
+  const syncBannerLink = (banner, newTitle) => {
+    if (banner.link?.includes('/coleccion')) {
+      const idsMatch = banner.link.match(/ids=([^&]+)/)
+      if (idsMatch) {
+        return `/coleccion?ids=${idsMatch[1]}&title=${encodeURIComponent(newTitle || 'Selección')}`
+      }
+    }
+    return banner.link
   }
 
   const addSlide = () => setHeroSlides(prev => [...prev, { ...defaultSlide }])
@@ -159,6 +191,65 @@ export default function LandingContent() {
     { key: 'logo', label: '🖼 Logo' },
     { key: 'contacto', label: '📞 Contacto' },
   ]
+
+  const MultiProductSelector = ({ productIds = [], onChange, currentLink, title }) => {
+    const handleAdd = (id) => {
+      const newIds = [...new Set([...productIds, id])]
+      const encodedTitle = encodeURIComponent(title || 'Selección')
+      onChange(newIds, `/coleccion?ids=${newIds.join(',')}&title=${encodedTitle}`)
+    }
+
+    const handleRemove = (id) => {
+      const newIds = productIds.filter(pid => pid !== id)
+      if (newIds.length === 0) {
+        onChange([], '')
+      } else {
+        const encodedTitle = encodeURIComponent(title || 'Selección')
+        onChange(newIds, `/coleccion?ids=${newIds.join(',')}&title=${encodedTitle}`)
+      }
+    }
+
+    const handleClear = () => {
+      onChange([], '')
+    }
+
+    return (
+      <div className="admin-multi-select">
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+          <select 
+            className="admin-form__input" 
+            style={{ flex: 1 }}
+            value=""
+            onChange={e => e.target.value && handleAdd(e.target.value)}
+          >
+            <option value="">➕ Seleccionar producto para agregar...</option>
+            {availableProducts.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+          <button className="admin-btn admin-btn--secondary admin-btn--sm" onClick={handleClear}>Limpiar</button>
+        </div>
+        
+        {productIds.length > 0 && (
+          <div className="admin-selected-tags">
+            {productIds.map(id => {
+              const p = availableProducts.find(ap => String(ap.id) === String(id))
+              return (
+                <span key={id} className="admin-tag">
+                  {p ? p.name : `ID: ${id}`}
+                  <button onClick={() => handleRemove(id)}>×</button>
+                </span>
+              )
+            })}
+          </div>
+        )}
+        
+        <div style={{ marginTop: '8px', fontSize: '0.75rem', color: 'var(--admin-text-muted)' }}>
+          Link generado: <code>{currentLink || '(ninguno)'}</code>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <AdminLayout title="Landing Page">
@@ -206,6 +297,21 @@ export default function LandingContent() {
                 <div className="admin-form__field">
                   <label className="admin-form__label">CTA</label>
                   <input className="admin-form__input" value={slide.cta} onChange={e => updateSlide(idx, 'cta', e.target.value)} placeholder="VER COLECCIÓN" />
+                </div>
+                <div className="admin-form__field">
+                  <label className="admin-form__label">Selección de Productos para este Banner</label>
+                  <MultiProductSelector 
+                    productIds={slide.productIds || []} 
+                    currentLink={slide.link}
+                    title={slide.title}
+                    onChange={(ids, link) => {
+                      setHeroSlides(prev => prev.map((s, i) => i === idx ? { ...s, productIds: ids, link } : s))
+                    }} 
+                  />
+                </div>
+                <div className="admin-form__field">
+                  <label className="admin-form__label">Link Manual (Opcional - pisa la selección anterior)</label>
+                  <input className="admin-form__input" value={slide.link || ''} onChange={e => updateSlide(idx, 'link', e.target.value)} placeholder="/productos?category=remeras" />
                 </div>
                 <div className="admin-form__field">
                   <label className="admin-form__label">Imagen (3:2 recomendada)</label>
@@ -297,11 +403,38 @@ export default function LandingContent() {
                 </div>
                 <div className="admin-form__field">
                   <label className="admin-form__label">Título</label>
-                  <input className="admin-form__input" value={lookbook.title} onChange={e => setLookbook(prev => ({ ...prev, title: e.target.value }))} />
+                  <input 
+                    className="admin-form__input" 
+                    value={lookbook.title} 
+                    onChange={e => {
+                      const val = e.target.value
+                      setLookbook(prev => {
+                        const updated = { ...prev, title: val }
+                        if (updated.link?.includes('/coleccion')) {
+                          const idsMatch = updated.link.match(/ids=([^&]+)/)
+                          if (idsMatch) updated.link = `/coleccion?ids=${idsMatch[1]}&title=${encodeURIComponent(val || 'Selección')}`
+                        }
+                        return updated
+                      })
+                    }} 
+                  />
                 </div>
                 <div className="admin-form__field">
                   <label className="admin-form__label">CTA</label>
                   <input className="admin-form__input" value={lookbook.cta} onChange={e => setLookbook(prev => ({ ...prev, cta: e.target.value }))} />
+                </div>
+                <div className="admin-form__field">
+                  <label className="admin-form__label">Selección de Productos para Lookbook</label>
+                  <MultiProductSelector 
+                    productIds={lookbook.productIds} 
+                    currentLink={lookbook.link}
+                    title={lookbook.title}
+                    onChange={(ids, link) => setLookbook(prev => ({ ...prev, productIds: ids, link }))} 
+                  />
+                </div>
+                <div className="admin-form__field">
+                  <label className="admin-form__label">Link Manual</label>
+                  <input className="admin-form__input" value={lookbook.link || ''} onChange={e => setLookbook(prev => ({ ...prev, link: e.target.value }))} placeholder="/productos" />
                 </div>
                 <div className="admin-form__field">
                   <label className="admin-form__label">Imagen (21:9 recomendada)</label>
@@ -336,7 +469,21 @@ export default function LandingContent() {
                 </div>
                 <div className="admin-form__field">
                   <label className="admin-form__label">Título</label>
-                  <input className="admin-form__input" value={saleBanner.title} onChange={e => setSaleBanner(prev => ({ ...prev, title: e.target.value }))} />
+                  <input 
+                    className="admin-form__input" 
+                    value={saleBanner.title} 
+                    onChange={e => {
+                      const val = e.target.value
+                      setSaleBanner(prev => {
+                        const updated = { ...prev, title: val }
+                        if (updated.link?.includes('/coleccion')) {
+                          const idsMatch = updated.link.match(/ids=([^&]+)/)
+                          if (idsMatch) updated.link = `/coleccion?ids=${idsMatch[1]}&title=${encodeURIComponent(val || 'Selección')}`
+                        }
+                        return updated
+                      })
+                    }} 
+                  />
                 </div>
                 <div className="admin-form__field">
                   <label className="admin-form__label">Subtítulo</label>
@@ -345,6 +492,19 @@ export default function LandingContent() {
                 <div className="admin-form__field">
                   <label className="admin-form__label">CTA</label>
                   <input className="admin-form__input" value={saleBanner.cta || ''} onChange={e => setSaleBanner(prev => ({ ...prev, cta: e.target.value }))} />
+                </div>
+                <div className="admin-form__field">
+                  <label className="admin-form__label">Selección de Productos para Sale</label>
+                  <MultiProductSelector 
+                    productIds={saleBanner.productIds} 
+                    currentLink={saleBanner.link}
+                    title={saleBanner.title}
+                    onChange={(ids, link) => setSaleBanner(prev => ({ ...prev, productIds: ids, link }))} 
+                  />
+                </div>
+                <div className="admin-form__field">
+                  <label className="admin-form__label">Link Manual</label>
+                  <input className="admin-form__input" value={saleBanner.link || ''} onChange={e => setSaleBanner(prev => ({ ...prev, link: e.target.value }))} placeholder="/productos?badge=sale" />
                 </div>
                 <div className="admin-form__field">
                   <label className="admin-form__label">Imagen (3:2)</label>

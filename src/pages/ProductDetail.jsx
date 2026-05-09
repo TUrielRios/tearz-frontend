@@ -12,6 +12,7 @@ export default function ProductDetail() {
   const [selectedSize, setSelectedSize] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [added, setAdded] = useState(false)
+  const [activeImage, setActiveImage] = useState(0)
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -63,9 +64,23 @@ export default function ProductDetail() {
       <div className="product-detail__grid">
         <div className="product-detail__images">
           <div className="product-detail__main-image">
-            <img src={product.images?.[0] || product.image} alt={product.name} />
+            <img src={product.images?.[activeImage] || product.image} alt={product.name} />
             {product.badge && <span className="product-card__badge">{product.badge}</span>}
           </div>
+          
+          {(product.images?.length > 1) && (
+            <div className="product-detail__thumbnails">
+              {product.images.map((img, idx) => (
+                <div 
+                  key={idx} 
+                  className={`product-detail__thumbnail ${activeImage === idx ? 'active' : ''}`}
+                  onClick={() => setActiveImage(idx)}
+                >
+                  <img src={img} alt={`${product.name} ${idx + 1}`} />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="product-detail__info">
