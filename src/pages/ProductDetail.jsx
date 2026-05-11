@@ -29,6 +29,21 @@ export default function ProductDetail() {
       .finally(() => setLoading(false))
   }, [id])
 
+  // Adjust quantity if it exceeds stock for newly selected size
+  useEffect(() => {
+    if (product && selectedSize) {
+      const stock = (product.sizeStock && product.sizeStock[selectedSize] !== undefined)
+        ? product.sizeStock[selectedSize]
+        : (product.stock || 0)
+      
+      if (quantity > stock && stock > 0) {
+        setQuantity(stock)
+      } else if (stock === 0) {
+        setQuantity(1)
+      }
+    }
+  }, [selectedSize, product])
+
   if (loading) {
     return (
       <div className="product-detail__loading">
@@ -143,7 +158,20 @@ export default function ProductDetail() {
             <div className="product-detail__quantity">
               <button onClick={() => setQuantity(q => Math.max(1, q - 1))}>−</button>
               <span>{quantity}</span>
-              <button onClick={() => setQuantity(q => q + 1)}>+</button>
+              <button 
+                onClick={() => {
+                  const stock = (product.sizeStock && product.sizeStock[selectedSize] !== undefined)
+                    ? product.sizeStock[selectedSize]
+                    : (product.stock || 0)
+                  setQuantity(q => q < stock ? q + 1 : q)
+                }}
+                disabled={(() => {
+                  const stock = (product.sizeStock && product.sizeStock[selectedSize] !== undefined)
+                    ? product.sizeStock[selectedSize]
+                    : (product.stock || 0)
+                  return quantity >= stock
+                })()}
+              >+</button>
             </div>
           </div>
 

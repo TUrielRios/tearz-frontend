@@ -98,16 +98,27 @@ export function CartProvider({ children }) {
   }
 
   const addItem = (product, size, quantity = 1) => {
+    // Get max stock for this specific size/product
+    const maxStock = (product.sizeStock && product.sizeStock[size] !== undefined)
+      ? product.sizeStock[size]
+      : (product.stock || 0)
+
     setItems(prev => {
       const key = `${product.id}_${size}`
       const existing = prev.find(i => `${i.productId}_${i.size}` === key)
+      
       if (existing) {
+        const newQuantity = Math.min(existing.quantity + quantity, maxStock)
         return prev.map(i =>
           `${i.productId}_${i.size}` === key
-            ? { ...i, quantity: i.quantity + quantity }
+            ? { ...i, quantity: newQuantity, maxStock }
             : i
         )
       }
+      
+      // If adding for the first time, still respect maxStock
+      const finalQuantity = Math.min(quantity, maxStock)
+      
       return [...prev, {
         productId: product.id,
         categoryId: product.categoryId || product.category?.id || product.category_id,
@@ -116,7 +127,8 @@ export function CartProvider({ children }) {
         price: parseFloat(product.price),
         image: product.images?.[0] || product.image || '',
         size,
-        quantity,
+        quantity: finalQuantity,
+        maxStock,
       }]
     })
     setIsOpen(true)
@@ -128,9 +140,13 @@ export function CartProvider({ children }) {
 
   const updateQuantity = (productId, size, quantity) => {
     if (quantity <= 0) return removeItem(productId, size)
-    setItems(prev => prev.map(i =>
-      i.productId === productId && i.size === size ? { ...i, quantity } : i
-    ))
+    setItems(prev => prev.map(i => {
+      if (i.productId === productId && i.size === size) {
+        const finalQty = i.maxStock !== undefined ? Math.min(quantity, i.maxStock) : quantity
+        return { ...i, quantity: finalQty }
+      }
+      return i
+    }))
   }
 
   const clearCart = () => setItems([])

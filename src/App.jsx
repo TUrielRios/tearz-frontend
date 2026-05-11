@@ -390,7 +390,10 @@ function Layout() {
                     <div className="cart-drawer__item-qty">
                       <button onClick={() => updateQuantity(item.productId, item.size, item.quantity - 1)}>−</button>
                       <span>{item.quantity}</span>
-                      <button onClick={() => updateQuantity(item.productId, item.size, item.quantity + 1)}>+</button>
+                      <button 
+                        onClick={() => updateQuantity(item.productId, item.size, item.quantity + 1)}
+                        disabled={item.maxStock !== undefined && item.quantity >= item.maxStock}
+                      >+</button>
                     </div>
                   </div>
                   <button className="cart-drawer__item-remove" onClick={() => removeItem(item.productId, item.size)}>
